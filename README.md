@@ -1,4 +1,4 @@
-# 🫀 Heart Disease Prediction & Patient Management API
+# Heart Disease Prediction & Patient Management API
 
 This project is a machine learning–powered API for predicting heart disease and managing patient records. It includes:
 
