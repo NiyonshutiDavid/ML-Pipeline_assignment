@@ -2,10 +2,21 @@ from pydantic import BaseModel
 
 class PatientBase(BaseModel):
     name: str
-    age: int
-    gender: str
-    cholesterol: float
-    blood_pressure: float
+    Age: int
+    Sex: str
+    RestingBP: float
+    Cholesterol: float
+    FastingBS: float
+    MaxHR: float
+    ExerciseAngina: float
+    Oldpeak: float
+    HeartDisease: float
+    ST_Slope_encoded: float
+    RestingECG_encoded: float
+    ChestPain_ASY: float
+    ChestPain_ATA: float
+    ChestPain_NAP: float
+    ChestPain_TA: float
 
 class PatientCreate(PatientBase):
     pass

@@ -1,12 +1,30 @@
--- File: sql/schema.sql
+-- File: schema.sql
+DROP TABLE IF EXISTS diagnoses CASCADE; -- CASCADE is important if other objects depend on it (like foreign keys)
+DROP TABLE IF EXISTS doctors CASCADE;
+DROP TABLE IF EXISTS patients CASCADE;
+
+-- Also drop the trigger if it exists before recreating it
+DROP TRIGGER IF EXISTS cholesterol_trigger ON patients;
+DROP FUNCTION IF EXISTS calculate_cholesterol_status();
 
 CREATE TABLE Patients (
     patient_id SERIAL PRIMARY KEY,
     name VARCHAR(100),
     age INT,
-    gender VARCHAR(10),
+    sex VARCHAR(10),
+    restingbp FLOAT,
     cholesterol FLOAT,
-    blood_pressure FLOAT
+    fastingbs FLOAT,
+    maxhr FLOAT,
+    exerciseangina FLOAT,
+    oldpeak FLOAT,
+    heartdisease FLOAT,
+    st_slope_encoded FLOAT,
+    restingecg_encoded FLOAT,
+    chestpain_ASY FLOAT,
+    chestpain_ATA FLOAT,
+    chestpain_NAP FLOAT,
+    chestpain_TA FLOAT
 );
 
 CREATE TABLE Doctors (
