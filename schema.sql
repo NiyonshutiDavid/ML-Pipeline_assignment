@@ -56,3 +56,5 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER cholesterol_trigger
 BEFORE INSERT ON Patients
 FOR EACH ROW EXECUTE FUNCTION validate_cholesterol();
+-- Popularize database with data from cleaned dataset --
+\copy Patients(Age, Sex, RestingBP, Cholesterol, FastingBS, MaxHR, ExerciseAngina, Oldpeak, HeartDisease, ST_Slope_encoded, RestingECG_encoded, ChestPain_ASY, ChestPain_ATA, ChestPain_NAP, ChestPain_TA) FROM 'data/heart_cleaned.csv' CSV HEADER;
