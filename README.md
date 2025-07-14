@@ -87,3 +87,6 @@ Chol Daniel Deng Dau /- Data Cleaning and preprocessing (data preparation for us
     schema.sql – SQL file with relational schema (≥ 3 tables with PKs + FKs)
 
     ERD Diagram 
+    
+<img width="844" height="696" alt="heart_db" src="https://github.com/user-attachments/assets/410e3a56-341b-47de-8881-c7556274e45b" />
+
