@@ -26,3 +26,15 @@ class PatientOut(PatientBase):
 
     class Config:
         orm_mode = True
+
+class PredictionResponse(BaseModel):
+    patient_id: int
+    patient_name: str
+    prediction: int
+    prediction_text: str
+    confidence: dict
+    features_used: dict
+
+class BatchPredictionResponse(BaseModel):
+    total_patients: int
+    predictions: list[PredictionResponse]
