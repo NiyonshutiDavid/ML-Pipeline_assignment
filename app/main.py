@@ -47,45 +47,61 @@ def predict_heart_disease(patient_id: int, db: Session = Depends(get_db)):
     """
     Predict heart disease for a specific patient using the trained Random Forest model
     """
-    # Get patient data
+    # 1) fetch patient
     patient = crud.get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    
-    # Load the trained model
-    model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "random_forest_model.pkl")
+
+    # 2) load model
+    model_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "models",
+        "random_forest_model.pkl",
+    )
     try:
         model = joblib.load(model_path)
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Model file not found")
-    
-    # Prepare features for prediction (excluding patient_id, name, and heart_disease)
+
+    # 3) re‐apply training encodings
+    sex_map    = {"M": 1, "F": 0}
+    angina_map = {"Y": 1, "N": 0}
+
+    sex_num    = sex_map   .get(patient.sex, 0)
+    angina_num = angina_map.get(patient.exercise_angina, 0)
+
+    # 4) build numeric feature vector
     features = np.array([[
         patient.age,
-        patient.sex, 
+        sex_num,
         patient.resting_bp,
         patient.cholesterol,
         patient.fasting_bs,
         patient.max_hr,
-        patient.exercise_angina,
+        angina_num,
         patient.oldpeak,
         patient.st_slope_encoded,
         patient.resting_ecg_encoded,
         patient.chest_pain_asy,
         patient.chest_pain_ata,
         patient.chest_pain_nap,
-        patient.chest_pain_ta
-    ]])
-    
-    # Make prediction
+        patient.chest_pain_ta,
+    ]], dtype=float)
+
+    # … after building `features` …
+    print("⚙️  API received features:", features.tolist())
+
     prediction = model.predict(features)[0]
+
+    # 5) predict
+    prediction       = model.predict(features)[0]
     prediction_proba = model.predict_proba(features)[0]
-    
-    # Update patient record with prediction
+
+    # 6) write back & return
     patient.heart_disease = float(prediction)
     db.commit()
     db.refresh(patient)
-    
+
     return {
         "patient_id": patient_id,
         "patient_name": patient.name,
@@ -93,7 +109,7 @@ def predict_heart_disease(patient_id: int, db: Session = Depends(get_db)):
         "prediction_text": "Heart Disease" if prediction == 1 else "No Heart Disease",
         "confidence": {
             "no_heart_disease": float(prediction_proba[0]),
-            "heart_disease": float(prediction_proba[1])
+            "heart_disease": float(prediction_proba[1]),
         },
         "features_used": {
             "age": patient.age,
@@ -109,55 +125,60 @@ def predict_heart_disease(patient_id: int, db: Session = Depends(get_db)):
             "chest_pain_asy": patient.chest_pain_asy,
             "chest_pain_ata": patient.chest_pain_ata,
             "chest_pain_nap": patient.chest_pain_nap,
-            "chest_pain_ta": patient.chest_pain_ta
-        }
+            "chest_pain_ta": patient.chest_pain_ta,
+        },
     }
+
 
 @app.post("/predict-batch/", response_model=schemas.BatchPredictionResponse)
 def predict_heart_disease_batch(db: Session = Depends(get_db)):
     """
     Predict heart disease for all patients in the database
     """
-    # Get all patients
     patients = crud.get_patients(db)
     if not patients:
         raise HTTPException(status_code=404, detail="No patients found")
-    
-    # Load the trained model
-    model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "random_forest_model.pkl")
+
+    model_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "models",
+        "random_forest_model.pkl",
+    )
     try:
         model = joblib.load(model_path)
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Model file not found")
-    
+
     predictions = []
-    
+    sex_map    = {"M": 1, "F": 0}
+    angina_map = {"Y": 1, "N": 0}
+
     for patient in patients:
-        # Prepare features for prediction
+        sex_num    = sex_map   .get(patient.sex, 0)
+        angina_num = angina_map.get(patient.exercise_angina, 0)
+
+        # build features
         features = np.array([[
             patient.age,
-            patient.sex,
+            sex_num,
             patient.resting_bp,
             patient.cholesterol,
             patient.fasting_bs,
             patient.max_hr,
-            patient.exercise_angina,
+            angina_num,
             patient.oldpeak,
             patient.st_slope_encoded,
             patient.resting_ecg_encoded,
             patient.chest_pain_asy,
             patient.chest_pain_ata,
             patient.chest_pain_nap,
-            patient.chest_pain_ta
-        ]])
-        
-        # Make prediction
-        prediction = model.predict(features)[0]
+            patient.chest_pain_ta,
+        ]], dtype=float)
+
+        prediction       = model.predict(features)[0]
         prediction_proba = model.predict_proba(features)[0]
-        
-        # Update patient record with prediction
-        patient.heart_disease = float(prediction)
-        
+
+        # append features_used exactly as single‐predict does
         predictions.append({
             "patient_id": patient.patient_id,
             "patient_name": patient.name,
@@ -165,14 +186,32 @@ def predict_heart_disease_batch(db: Session = Depends(get_db)):
             "prediction_text": "Heart Disease" if prediction == 1 else "No Heart Disease",
             "confidence": {
                 "no_heart_disease": float(prediction_proba[0]),
-                "heart_disease": float(prediction_proba[1])
-            }
+                "heart_disease":     float(prediction_proba[1]),
+            },
+            "features_used": {          # ← ← ← ADD THIS BLOCK
+                "age":                patient.age,
+                "sex":                patient.sex,
+                "resting_bp":         patient.resting_bp,
+                "cholesterol":        patient.cholesterol,
+                "fasting_bs":         patient.fasting_bs,
+                "max_hr":             patient.max_hr,
+                "exercise_angina":    patient.exercise_angina,
+                "oldpeak":            patient.oldpeak,
+                "st_slope_encoded":   patient.st_slope_encoded,
+                "resting_ecg_encoded":patient.resting_ecg_encoded,
+                "chest_pain_asy":     patient.chest_pain_asy,
+                "chest_pain_ata":     patient.chest_pain_ata,
+                "chest_pain_nap":     patient.chest_pain_nap,
+                "chest_pain_ta":      patient.chest_pain_ta,
+            },
         })
-    
-    # Commit all updates
+
+        # persist the prediction value to the DB
+        patient.heart_disease = float(prediction)
+
     db.commit()
-    
+
     return {
         "total_patients": len(patients),
-        "predictions": predictions
+        "predictions":    predictions,
     }
